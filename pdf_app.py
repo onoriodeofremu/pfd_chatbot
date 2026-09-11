@@ -9,7 +9,7 @@ import os
 import tempfile
 
 import streamlit as st
-
+os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
 import pdfbot
 from pdfbot import PDFBot
 
