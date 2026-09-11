@@ -1,6 +1,6 @@
 import os
 import time
-
+import streamlit as st
 import chromadb
 import google.genai as genai
 from dotenv import load_dotenv
