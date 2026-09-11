@@ -11,7 +11,7 @@ import tempfile
 import streamlit as st
 
 import pdfbot
-from Practice.ai_prompts.pdf.pdfbot import PDFBot
+from pdfbot import PDFBot
 
 st.set_page_config(page_title="PDF Q&A", page_icon="📄", layout="centered")
 

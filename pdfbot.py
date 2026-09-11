@@ -9,7 +9,7 @@ from pypdf import PdfReader  # pypdf is the maintained successor to PyPDF2
 
 load_dotenv()
 
-client = genai.Client()
+client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 
 EMBED_MODEL = "gemini-embedding-001"   # current embedding model
 CHAT_MODEL = "gemini-3.6-flash"        # current stable Flash model
