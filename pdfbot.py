@@ -83,10 +83,12 @@ def embed(contents, task_type, progress=None):
 
 
 class PDFBot:
-    def __init__(self, storage_path=STORAGE_PATH):
+    def __init__(self, storage_path=STORAGE_PATH, session_id=None):
         self.chroma_client = chromadb.PersistentClient(path=storage_path)
+        # Each session gets its own isolated collection
+        collection_name = f"session_{session_id}" if session_id else "pdf_knowledge_base"
         self.collection = self.chroma_client.get_or_create_collection(
-            name="pdf_knowledge_base"
+            name=collection_name
         )
 
     def chunk(self, text):

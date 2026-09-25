@@ -12,14 +12,16 @@ import streamlit as st
 os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
 import pdfbot
 from pdfbot import PDFBot
+import uuid
 
 st.set_page_config(page_title="PDF Q&A", page_icon="📄", layout="centered")
 
 
-@st.cache_resource
 def get_bot():
-    """One bot per session, so the Chroma database isn't reopened on each rerun."""
-    return PDFBot()
+    """One bot per browser session, isolated by session ID."""
+    if "session_id" not in st.session_state:
+        st.session_state.session_id = str(uuid.uuid4())
+    return PDFBot(session_id=st.session_state.session_id)
 
 
 def ingest(bot, uploaded):
