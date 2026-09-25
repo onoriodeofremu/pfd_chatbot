@@ -4,16 +4,10 @@ Ask questions about your own PDFs and get answers grounded in the document —
 with the passages the answer came from shown alongside it, so you can check
 nothing was invented.
 
-Built on Google Gemini and ChromaDB. Runs on your machine; your documents stay
-on your disk.
+Built on Google Gemini and ChromaDB. Supports multiple concurrent users with
+full session isolation — no document crossover between visitors.
 
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-
-> ### ⚠️ Run this locally, not on a public server
->
-> This is a **single-user tool**. It has no logins and no separation between
-> visitors, so on a shared address everyone sees everyone else's documents.
-> [Details below](#why-this-is-single-user-only).
 
 ---
 
@@ -24,13 +18,29 @@ This is a small RAG (retrieval-augmented generation) pipeline:
 1. **Extract** the text from your PDF with `pypdf`
 2. **Split** it into overlapping-optional chunks of ~500 words
 3. **Embed** each chunk into a vector with `gemini-embedding-001` and store it
-   in a local ChromaDB database
+   in a ChromaDB collection scoped to the current session
 4. **Retrieve** the chunks most similar to your question when you ask one
 5. **Answer** using `gemini-3.6-flash`, with a strict instruction to use only
    those chunks — if the answer isn't there, it says so rather than guessing
 
 The point of step 5 is that the model can't wander off into things it half
 remembers from training. Every answer is traceable to a passage you can read.
+
+---
+
+## Multi-user session isolation
+
+Each browser session gets its own isolated ChromaDB collection, keyed by a
+UUID generated at session start and stored in `st.session_state`. This means:
+
+- Documents uploaded by one user are invisible to every other user
+- Questions only search the current session's indexed documents
+- Sessions are independent across tabs, devices and concurrent visitors
+
+**One current limitation:** sessions are not persistent across browser restarts.
+If a user closes and reopens the app, they get a new session and will need to
+re-upload their PDFs. Persistent user accounts (via `st.login` with Google OIDC)
+are a planned future improvement.
 
 ---
 
@@ -136,7 +146,7 @@ Everything stays local:
 
 | What | Where |
 |---|---|
-| Text chunks and their embeddings | `pdf_storage/` |
+| Text chunks and their embeddings | `pdf_storage/` (one sub-collection per session) |
 | Your API key | `.env` |
 
 Your PDF file itself is never uploaded to Google. What *is* sent, each time you
@@ -144,7 +154,7 @@ ask a question, is the text of your question and the handful of passages that
 matched it — typically three short extracts. If a document is sensitive enough
 that this matters, don't put it in.
 
-To wipe the index, delete the `pdf_storage/` folder.
+To wipe all indexed data, delete the `pdf_storage/` folder.
 
 ---
 
@@ -153,43 +163,10 @@ To wipe the index, delete the `pdf_storage/` folder.
 - **Scanned PDFs won't work.** If the PDF is photographs of pages there is no
   text layer to extract. You'd need OCR first. The app tells you rather than
   failing silently.
-- **Indexing blocks while it runs.** Fine for a personal tool; it would need a
-  background queue to serve several people at once.
-See also [Why this is single-user only](#why-this-is-single-user-only).
-
----
-
-## Why this is single-user only
-
-If you host this where two people can reach it, **they share one document
-library**. This is not a subtle edge case — it is how the app is built:
-
-- `@st.cache_resource` on `get_bot()` gives the entire server **one** `PDFBot`
-  instance. That is what the decorator is for.
-- That bot has **one** ChromaDB collection. `documents()` returns everything in
-  it, with no record of who uploaded what.
-- The delete button performs no ownership check.
-
-So a second visitor can:
-
-| | |
-|---|---|
-| See your documents | Every filename appears in their sidebar |
-| Read their contents | Questions return real passages of your text |
-| Delete them | The 🗑 button works on anyone's documents |
-| Spend your quota | Every question bills to the `GOOGLE_API_KEY` in your `.env` |
-
-The one thing that *is* private is the on-screen Q&A history —
-`st.session_state` is per-session, so people don't see each other's questions.
-That is small consolation when they can read each other's source documents.
-
-**Making it safe for more than one person** means adding real per-user
-ownership — `st.login` with Google OIDC (Streamlit 1.42+), documents tagged to
-the signed-in account, and every query and delete filtered by owner. That is a
-feature to build deliberately, not a config flag.
-
-Until then: run it on `localhost`, or give people the code so they can run their
-own copy.
+- **Indexing blocks while it runs.** Fine for a personal tool; a background
+  queue would be needed for high-traffic deployments.
+- **Sessions are not persistent.** Closing and reopening the browser starts a
+  fresh session. Re-upload your PDFs to continue.
 
 ---
 
